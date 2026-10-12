@@ -1,0 +1,1103 @@
+{
+ "tests": [
+  {
+   "id": "N01",
+   "categorie": "Nominal",
+   "titre": "Affichage de la page d'accueil avec la liste des restaurants",
+   "objectif": "Vérifier que le catalogue est accessible sans authentification",
+   "preconditions": "Application démarrée, base initialisée",
+   "donnees": "aucune",
+   "etapes": "1. GET / ; 2. Lire la liste des restaurants affiches",
+   "attendu": "HTTP 200 et les 5 restaurants ouverts sont listes",
+   "obtenu": "HTTP 200, restaurants trouves : Burger Factory, Tokyo Bowl, Green Kitchen, Pizza Roma, Couscous Atlas",
+   "statut": "Pass",
+   "bug": "",
+   "evidence": "GET /\n--> HTTP 200\nRestaurants detectes dans le HTML : ['Burger Factory', 'Tokyo Bowl', 'Green Kitchen', 'Pizza Roma', 'Couscous Atlas']"
+  },
+  {
+   "id": "N02",
+   "categorie": "Nominal",
+   "titre": "Connexion d'un client avec des identifiants valides",
+   "objectif": "Vérifier le parcours d'authentification nominal",
+   "preconditions": "Compte alice@example.com existant",
+   "donnees": "alice@example.com / Password123!",
+   "etapes": "1. POST /login avec les identifiants ; 2. Vérifier la session",
+   "attendu": "HTTP 200, l'utilisateur est authentifie (lien de déconnexion visible)",
+   "obtenu": "HTTP 200, session authentifiée : True",
+   "statut": "Pass",
+   "bug": "",
+   "evidence": "POST /login (alice@example.com)\n--> HTTP 200\nlien de deconnexion present : True"
+  },
+  {
+   "id": "N03",
+   "categorie": "Nominal",
+   "titre": "Ajout d'un produit disponible au panier",
+   "objectif": "Vérifier l'ajout au panier depuis la fiche restaurant",
+   "preconditions": "Client connecté, Classic Burger disponible (stock 100)",
+   "donnees": "product_id=1 (Classic Burger 11.90 EUR), quantité=2",
+   "etapes": "1. POST /cart/add/1 quantity=2 ; 2. GET /cart",
+   "attendu": "Le produit apparait dans le panier avec la quantité demandée",
+   "obtenu": "Produit présent dans le panier : True",
+   "statut": "Pass",
+   "bug": "",
+   "evidence": "POST /cart/add/1 (quantity=2)\n--> HTTP 200\nGET /cart --> HTTP 200\nflash: ['Classic Burger ajouté au panier.', '🎟️ 🎟️ Code ATLAS15 annoncé comme -15% sur ce restaurant⭐ 4.9 · 40 min · Livraison 2.99 € · Minimum 25.00 €\\nVoir le menu\\nJaponaisOUVERT']"
+  },
+  {
+   "id": "N04",
+   "categorie": "Nominal",
+   "titre": "Passage de commande complet en paiement carte",
+   "objectif": "Valider le parcours critique de bout en bout (panier -> paiement -> commande)",
+   "preconditions": "Client connecté, panier a 23.80 EUR (>= minimum 20 EUR de Burger Factory)",
+   "donnees": "2 x Classic Burger, paiement=card",
+   "etapes": "1. Ajouter 2 Classic Burger ; 2. POST /checkout confirm=1 payment_method=card",
+   "attendu": "HTTP 200, commande creee et confirmée, panier vide",
+   "obtenu": "Commande confirmée : True",
+   "statut": "Pass",
+   "bug": "",
+   "evidence": "POST /checkout (confirm=1, payment_method=card)\n--> HTTP 200\nflash: ['Commande confirmée !']"
+  },
+  {
+   "id": "N05",
+   "categorie": "Nominal",
+   "titre": "Consultation de la liste des restaurants via l'API authentifiée",
+   "objectif": "Vérifier l'accès API nominal avec la clé X-API-Key",
+   "preconditions": "API démarrée",
+   "donnees": "X-API-Key: quickorder-demo-key",
+   "etapes": "1. GET /api/restaurants avec l'en-tête X-API-Key",
+   "attendu": "HTTP 200 et une liste de restaurants au format JSON",
+   "obtenu": "HTTP 200, count=6",
+   "statut": "Pass",
+   "bug": "",
+   "evidence": "GET http://127.0.0.1:5000/api/restaurants\n--> HTTP 200\n{\"count\":6,\"items\":[{\"address\":\"7 boulevard Voltaire, Paris\",\"category\":\"Marocain\",\"delivery_fee\":2.99,\"delivery_time_min\":40,\"description\":\"Cuisine marocaine familiale et g\\u00e9n\\u00e9reuse.\",\"id\":5,\"is_open\":true,\"minimum_order\":25.0,\"name\":\"Couscous Atlas\",\"promo_text\":\"\\ud83c\\udf9f\\ufe0f Code A ...[tronque]"
+  },
+  {
+   "id": "N06",
+   "categorie": "Nominal",
+   "titre": "Creation d'une commande valide via l'API",
+   "objectif": "Vérifier la creation de commande par l'API REST",
+   "preconditions": "Clé API valide, produit 1 disponible et en stock",
+   "donnees": "{\"items\":[{\"product_id\":1,\"quantity\":2}],\"payment_method\":\"card\"}",
+   "etapes": "1. POST /api/orders avec un payload valide",
+   "attendu": "HTTP 201 et la commande creee en réponse",
+   "obtenu": "HTTP 201",
+   "statut": "Pass",
+   "bug": "",
+   "evidence": "POST http://127.0.0.1:5000/api/orders\nbody: {\"items\": [{\"product_id\": 1, \"quantity\": 2}], \"payment_method\": \"card\"}\n--> HTTP 201\n{\"cash_received\":null,\"change_due\":null,\"created_at\":\"2026-09-22T13:14:09.435999\",\"delivery_fee\":2.99,\"discount\":0.0,\"id\":23,\"items\":[{\"line_total\":23.8,\"product_id\":1,\"product_name\":\"Classic Burger\",\"quantity\":2,\"unit_price\":11.9}],\"payment_method\":\"card\",\"payment_status\":\"paid\",\"restaurant_id\":1,\"status\":\"confirmed\",\"subtotal\":23.8,\"total\":26.79}\n"
+  },
+  {
+   "id": "N07",
+   "categorie": "Nominal",
+   "titre": "Annulation d'une commande au statut 'confirmed'",
+   "objectif": "Vérifier la règle d'annulation sur un statut autorise",
+   "preconditions": "Commande 23 au statut confirmed",
+   "donnees": "order_id=23",
+   "etapes": "1. POST /api/orders/23/cancel",
+   "attendu": "HTTP 200 et statut passe a 'cancelled'",
+   "obtenu": "HTTP 200, statut=cancelled",
+   "statut": "Pass",
+   "bug": "",
+   "evidence": "POST http://127.0.0.1:5000/api/orders/23/cancel\n--> HTTP 200\n{\"cash_received\":null,\"change_due\":null,\"created_at\":\"2026-09-22T13:14:09.435999\",\"delivery_fee\":2.99,\"discount\":0.0,\"id\":23,\"items\":[{\"line_total\":23.8,\"product_id\":1,\"product_name\":\"Classic Burger\",\"quantity\":2,\"unit_price\":11.9}],\"payment_method\":\"card\",\"payment_status\":\"paid\",\"restaurant_id\":1,\" ...[tronque]"
+  },
+  {
+   "id": "N08",
+   "categorie": "Nominal",
+   "titre": "Endpoint de supervision /api/health",
+   "objectif": "Vérifier la disponibilité du service (monitoring)",
+   "preconditions": "Application démarrée",
+   "donnees": "aucune",
+   "etapes": "1. GET /api/health",
+   "attendu": "HTTP 200 et un JSON contenant status=ok",
+   "obtenu": "HTTP 200, corps={\"service\":\"quickorder\",\"status\":\"ok\",\"timestamp\":\"2026-09-22T13:14:09.514431\"}",
+   "statut": "Pass",
+   "bug": "",
+   "evidence": "GET http://127.0.0.1:5000/api/health\n--> HTTP 200\n{\"service\":\"quickorder\",\"status\":\"ok\",\"timestamp\":\"2026-09-22T13:14:09.514431\"}\n"
+  },
+  {
+   "id": "L01",
+   "categorie": "Limite",
+   "titre": "Commande API avec la quantité minimale autorisée (1)",
+   "objectif": "Vérifier la borne inférieure acceptée de l'intervalle [1..20]",
+   "preconditions": "Produit 9 (Miso Soup) disponible",
+   "donnees": "quantity=1",
+   "etapes": "1. POST /api/orders avec quantity=1",
+   "attendu": "HTTP 201, la commande est acceptée",
+   "obtenu": "HTTP 201",
+   "statut": "Pass",
+   "bug": "",
+   "evidence": "POST http://127.0.0.1:5000/api/orders\nbody: {\"items\": [{\"product_id\": 9, \"quantity\": 1}], \"payment_method\": \"card\"}\n--> HTTP 201\n{\"cash_received\":null,\"change_due\":null,\"created_at\":\"2026-09-22T13:14:09.544141\",\"delivery_fee\":3.49,\"discount\":0.0,\"id\":24,\"items\":[{\"line_total\":3.2,\"product_id\":9,\"product_name\":\"Miso Soup\",\"quantity\":1,\"unit_price\":3.2}],\"payment_method\":\"card\",\"payment_status\":\"paid\",\"restaurant_id\":2,\"status\" ...[tronque]"
+  },
+  {
+   "id": "L02",
+   "categorie": "Limite",
+   "titre": "Commande API avec la quantité maximale autorisée (20)",
+   "objectif": "Vérifier la borne supérieure acceptée de l'intervalle [1..20]",
+   "preconditions": "Produit 9 (Miso Soup) en stock suffisant",
+   "donnees": "quantity=20",
+   "etapes": "1. POST /api/orders avec quantity=20",
+   "attendu": "HTTP 201, la commande est acceptée",
+   "obtenu": "HTTP 201",
+   "statut": "Pass",
+   "bug": "",
+   "evidence": "POST http://127.0.0.1:5000/api/orders\nbody: {\"items\": [{\"product_id\": 9, \"quantity\": 20}], \"payment_method\": \"card\"}\n--> HTTP 201\n{\"cash_received\":null,\"change_due\":null,\"created_at\":\"2026-09-22T13:14:09.591227\",\"delivery_fee\":3.49,\"discount\":0.0,\"id\":25,\"items\":[{\"line_total\":64.0,\"product_id\":9,\"product_name\":\"Miso Soup\",\"quantity\":20,\"unit_price\":3.2}],\"payment_method\":\"card\",\"payment_status\":\"paid\",\"restaurant_id\":2,\"statu ...[tronque]"
+  },
+  {
+   "id": "L03",
+   "categorie": "Limite",
+   "titre": "Refus d'une commande API au-dela de la quantité maximale (21)",
+   "objectif": "Vérifier le rejet juste au-dessus de la borne haute",
+   "preconditions": "Produit 9 disponible",
+   "donnees": "quantity=21",
+   "etapes": "1. POST /api/orders avec quantity=21",
+   "attendu": "HTTP 400 avec un message d'erreur explicite",
+   "obtenu": "HTTP 400 : {\"error\":\"quantity must be between 1 and 20\"}",
+   "statut": "Pass",
+   "bug": "",
+   "evidence": "POST http://127.0.0.1:5000/api/orders\nbody: {\"items\": [{\"product_id\": 9, \"quantity\": 21}], \"payment_method\": \"card\"}\n--> HTTP 400\n{\"error\":\"quantity must be between 1 and 20\"}\n"
+  },
+  {
+   "id": "L04",
+   "categorie": "Limite",
+   "titre": "Refus d'une commande API avec une quantité nulle (0)",
+   "objectif": "Vérifier le rejet juste en dessous de la borne basse",
+   "preconditions": "Produit 9 disponible",
+   "donnees": "quantity=0",
+   "etapes": "1. POST /api/orders avec quantity=0",
+   "attendu": "HTTP 400 avec un message d'erreur explicite",
+   "obtenu": "HTTP 400 : {\"error\":\"quantity must be between 1 and 20\"}",
+   "statut": "Pass",
+   "bug": "",
+   "evidence": "POST http://127.0.0.1:5000/api/orders\nbody: {\"items\": [{\"product_id\": 9, \"quantity\": 0}], \"payment_method\": \"card\"}\n--> HTTP 400\n{\"error\":\"quantity must be between 1 and 20\"}\n"
+  },
+  {
+   "id": "L05",
+   "categorie": "Limite",
+   "titre": "Coupon accepté au montant minimum exact (20.00 EUR)",
+   "objectif": "Vérifier l'inclusion de la borne du montant minimum",
+   "preconditions": "Coupon WELCOME10 actif, minimum 20 EUR",
+   "donnees": "code=WELCOME10, subtotal=20",
+   "etapes": "1. POST /api/coupons/validate avec subtotal=20",
+   "attendu": "Coupon valide, remise de 2.00 EUR appliquée",
+   "obtenu": "valid=True, discount=2.0",
+   "statut": "Pass",
+   "bug": "",
+   "evidence": "POST http://127.0.0.1:5000/api/coupons/validate\nbody: {\"code\": \"WELCOME10\", \"subtotal\": 20}\n--> HTTP 200\n{\"code\":\"WELCOME10\",\"discount\":2.0,\"discount_percent\":10.0,\"valid\":true}\n"
+  },
+  {
+   "id": "L06",
+   "categorie": "Limite",
+   "titre": "Coupon refusé juste sous le montant minimum (19.99 EUR)",
+   "objectif": "Vérifier l'exclusion juste sous la borne du montant minimum",
+   "preconditions": "Coupon WELCOME10 actif, minimum 20 EUR",
+   "donnees": "code=WELCOME10, subtotal=19.99",
+   "etapes": "1. POST /api/coupons/validate avec subtotal=19.99",
+   "attendu": "Coupon refusé avec le motif 'montant minimum non atteint'",
+   "obtenu": "valid=False, error=Montant minimum non atteint.",
+   "statut": "Pass",
+   "bug": "",
+   "evidence": "POST http://127.0.0.1:5000/api/coupons/validate\nbody: {\"code\": \"WELCOME10\", \"subtotal\": 19.99}\n--> HTTP 200\n{\"error\":\"Montant minimum non atteint.\",\"minimum\":20.0,\"valid\":false}\n"
+  },
+  {
+   "id": "L07",
+   "categorie": "Limite",
+   "titre": "Plafonnement de la remise au max_discount (SAVE20 plafonne a 12 EUR)",
+   "objectif": "Vérifier que la remise ne dépasse jamais le plafond du coupon",
+   "preconditions": "Coupon SAVE20 : 20%, plafond 12 EUR",
+   "donnees": "code=SAVE20, subtotal=200",
+   "etapes": "1. POST /api/coupons/validate avec subtotal=200 (20% = 40 EUR théoriques)",
+   "attendu": "Remise plafonnée a 12.00 EUR",
+   "obtenu": "discount=12.0",
+   "statut": "Pass",
+   "bug": "",
+   "evidence": "POST http://127.0.0.1:5000/api/coupons/validate\nbody: {\"code\": \"SAVE20\", \"subtotal\": 200}\n--> HTTP 200\n{\"code\":\"SAVE20\",\"discount\":12.0,\"discount_percent\":20.0,\"valid\":true}\n"
+  },
+  {
+   "id": "L08",
+   "categorie": "Limite",
+   "titre": "Commande de la totalité du stock restant (Salmon Bowl, stock 2)",
+   "objectif": "Vérifier le comportement a la limite exacte du stock disponible",
+   "preconditions": "Salmon Bowl (id 7) avec un stock de 0",
+   "donnees": "product_id=7, quantity=0",
+   "etapes": "1. Lire le stock ; 2. Commander exactement ce stock ; 3. Relire le stock",
+   "attendu": "HTTP 201 et stock ramene à 0 (jamais négatif)",
+   "obtenu": "HTTP 400, stock 0 -> 0",
+   "statut": "Fail",
+   "bug": "",
+   "evidence": "POST http://127.0.0.1:5000/api/orders\nbody: {\"items\": [{\"product_id\": 7, \"quantity\": 0}], \"payment_method\": \"card\"}\n--> HTTP 400\n{\"error\":\"quantity must be between 1 and 20\"}\n\nstock avant=0 / après=0"
+  },
+  {
+   "id": "L09",
+   "categorie": "Limite",
+   "titre": "Inscription acceptée avec un mot de passe de 8 caracteres",
+   "objectif": "Vérifier la borne inférieure acceptée de la longueur du mot de passe",
+   "preconditions": "Email non utilise",
+   "donnees": "password='Abcd1234' (8 caracteres)",
+   "etapes": "1. POST /register avec un mot de passe de 8 caracteres",
+   "attendu": "Inscription acceptée",
+   "obtenu": "Inscription acceptée : True (flash: ['🎟️ 🎟️ Code ATLAS15 annoncé comme -15% sur ce restaurant⭐ 4.9 · 40 min · Livraison 2.99 € · Minimum 25.00 €\\nVoir le menu\\nJaponaisOUVERT'])",
+   "statut": "Pass",
+   "bug": "",
+   "evidence": "POST /register (password=8 caracteres)\n--> HTTP 200\nflash: ['🎟️ 🎟️ Code ATLAS15 annoncé comme -15% sur ce restaurant⭐ 4.9 · 40 min · Livraison 2.99 € · Minimum 25.00 €\\nVoir le menu\\nJaponaisOUVERT', '🎟️ Livraison gratuite dès 30 € avec TOKYO30⭐ 4.8 · 35 min · Livraison 3.49 € · Minimum 15.00 €\\nVoir le menu\\nBurgersOUVERT']"
+  },
+  {
+   "id": "L10",
+   "categorie": "Limite",
+   "titre": "Inscription refusée avec un mot de passe de 7 caracteres",
+   "objectif": "Vérifier le rejet juste sous la borne de longueur du mot de passe",
+   "preconditions": "Email non utilise",
+   "donnees": "password='Abcd123' (7 caracteres)",
+   "etapes": "1. POST /register avec un mot de passe de 7 caracteres",
+   "attendu": "Inscription refusée avec un message explicite",
+   "obtenu": "Refus correct : True (flash: ['Nom, email valide et mot de passe d&#39;au moins 8 caractères requis.'])",
+   "statut": "Pass",
+   "bug": "",
+   "evidence": "POST /register (password=7 caracteres)\n--> HTTP 200\nflash: ['Nom, email valide et mot de passe d&#39;au moins 8 caractères requis.']"
+  },
+  {
+   "id": "E01",
+   "categorie": "Erreur",
+   "titre": "Refus d'un appel API sans clé d'authentification",
+   "objectif": "Vérifier que l'API est protégée",
+   "preconditions": "aucune",
+   "donnees": "aucun en-tête X-API-Key",
+   "etapes": "1. GET /api/restaurants sans en-tête X-API-Key",
+   "attendu": "HTTP 401 avec un message d'erreur",
+   "obtenu": "HTTP 401 : {\"error\":\"missing or invalid X-API-Key\",\"hint\":\"Use Swagger > Authorize\"}",
+   "statut": "Pass",
+   "bug": "",
+   "evidence": "GET http://127.0.0.1:5000/api/restaurants\n--> HTTP 401\n{\"error\":\"missing or invalid X-API-Key\",\"hint\":\"Use Swagger > Authorize\"}\n"
+  },
+  {
+   "id": "E02",
+   "categorie": "Erreur",
+   "titre": "Refus d'un appel API avec une clé invalide",
+   "objectif": "Vérifier le rejet d'une clé erronee",
+   "preconditions": "aucune",
+   "donnees": "X-API-Key: clé-bidon",
+   "etapes": "1. GET /api/restaurants avec une clé invalide",
+   "attendu": "HTTP 401 avec un message d'erreur",
+   "obtenu": "HTTP 401 : {\"error\":\"missing or invalid X-API-Key\",\"hint\":\"Use Swagger > Authorize\"}",
+   "statut": "Pass",
+   "bug": "",
+   "evidence": "GET http://127.0.0.1:5000/api/restaurants\n--> HTTP 401\n{\"error\":\"missing or invalid X-API-Key\",\"hint\":\"Use Swagger > Authorize\"}\n"
+  },
+  {
+   "id": "E03",
+   "categorie": "Erreur",
+   "titre": "Consultation d'un restaurant inexistant",
+   "objectif": "Vérifier la gestion des ressources absentes",
+   "preconditions": "aucune",
+   "donnees": "restaurant_id=9999",
+   "etapes": "1. GET /api/restaurants/9999",
+   "attendu": "HTTP 404",
+   "obtenu": "HTTP 404",
+   "statut": "Pass",
+   "bug": "",
+   "evidence": "GET http://127.0.0.1:5000/api/restaurants/9999\n--> HTTP 404\n<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai ...[tronque]"
+  },
+  {
+   "id": "E04",
+   "categorie": "Erreur",
+   "titre": "Consultation d'un produit inexistant",
+   "objectif": "Vérifier la gestion des ressources absentes",
+   "preconditions": "aucune",
+   "donnees": "product_id=9999",
+   "etapes": "1. GET /api/products/9999",
+   "attendu": "HTTP 404",
+   "obtenu": "HTTP 404",
+   "statut": "Pass",
+   "bug": "",
+   "evidence": "GET http://127.0.0.1:5000/api/products/9999\n--> HTTP 404\n<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try agai ...[tronque]"
+  },
+  {
+   "id": "E05",
+   "categorie": "Erreur",
+   "titre": "Refus de connexion avec un mot de passe errone",
+   "objectif": "Vérifier le rejet d'identifiants invalides",
+   "preconditions": "Compte alice existant",
+   "donnees": "alice@example.com / MauvaisMotDePasse!",
+   "etapes": "1. POST /login avec un mot de passe errone",
+   "attendu": "Connexion refusée avec un message d'erreur",
+   "obtenu": "Refus correct : True (flash: ['Email ou mot de passe incorrect.'])",
+   "statut": "Pass",
+   "bug": "",
+   "evidence": "POST /login (mot de passe errone)\n--> HTTP 200\nflash: ['Email ou mot de passe incorrect.']"
+  },
+  {
+   "id": "E06",
+   "categorie": "Erreur",
+   "titre": "Refus d'un coupon expiré",
+   "objectif": "Vérifier le contrôle de la date d'expiration des coupons",
+   "preconditions": "Coupon EXPIRED10 expiré depuis 1 jour",
+   "donnees": "code=EXPIRED10, subtotal=50",
+   "etapes": "1. POST /api/coupons/validate avec le code EXPIRED10",
+   "attendu": "Coupon refusé (invalide ou expiré)",
+   "obtenu": "HTTP 404, valid=False",
+   "statut": "Pass",
+   "bug": "",
+   "evidence": "POST http://127.0.0.1:5000/api/coupons/validate\nbody: {\"code\": \"EXPIRED10\", \"subtotal\": 50}\n--> HTTP 404\n{\"error\":\"Coupon invalide ou expir\\u00e9.\",\"valid\":false}\n"
+  },
+  {
+   "id": "E07",
+   "categorie": "Erreur",
+   "titre": "Accès au checkout avec un panier vide",
+   "objectif": "Vérifier la protection du tunnel de commande",
+   "preconditions": "Client connecté, panier vide",
+   "donnees": "aucune",
+   "etapes": "1. Vider le panier ; 2. GET /checkout",
+   "attendu": "Redirection vers le panier avec un message d'avertissement",
+   "obtenu": "Message affiché : ['Votre panier est vide.']",
+   "statut": "Pass",
+   "bug": "",
+   "evidence": "GET /checkout (panier vide)\n--> HTTP 200\nURL finale: http://127.0.0.1:5000/cart\nflash: ['Votre panier est vide.']"
+  },
+  {
+   "id": "E08",
+   "categorie": "Erreur",
+   "titre": "Refus d'une commande melangeant deux restaurants",
+   "objectif": "Vérifier la règle 'un panier = un restaurant' côté API",
+   "preconditions": "Produit 1 = Burger Factory, produit 9 = Tokyo Bowl",
+   "donnees": "items=[product_id 1, product_id 9]",
+   "etapes": "1. POST /api/orders avec des produits de deux restaurants",
+   "attendu": "HTTP 400 avec un message explicite",
+   "obtenu": "HTTP 400 : {\"error\":\"all products must belong to the same restaurant\"}",
+   "statut": "Pass",
+   "bug": "",
+   "evidence": "POST http://127.0.0.1:5000/api/orders\nbody: {\"items\": [{\"product_id\": 1, \"quantity\": 1}, {\"product_id\": 9, \"quantity\": 1}], \"payment_method\": \"card\"}\n--> HTTP 400\n{\"error\":\"all products must belong to the same restaurant\"}\n"
+  },
+  {
+   "id": "E09",
+   "categorie": "Erreur",
+   "titre": "Accès a l'espace d'administration par un client standard",
+   "objectif": "Vérifier le cloisonnement des roles",
+   "preconditions": "Alice connectée avec le role 'customer'",
+   "donnees": "GET /admin/",
+   "etapes": "1. Se connecter comme client ; 2. GET /admin/",
+   "attendu": "Accès refusé et redirection hors de l'espace admin",
+   "obtenu": "URL finale: http://127.0.0.1:5000/, flash: ['Accès réservé aux administrateurs.']",
+   "statut": "Pass",
+   "bug": "",
+   "evidence": "GET /admin/ (role customer)\n--> HTTP 200\nURL finale: http://127.0.0.1:5000/\nflash: ['Accès réservé aux administrateurs.', '🎟️ 🎟️ Code ATLAS15 annoncé comme -15% sur ce restaurant⭐ 4.9 · 40 min · Livraison 2.99 € · Minimum 25.00 €\\nVoir le menu\\nJaponaisOUVERT']"
+  },
+  {
+   "id": "E10",
+   "categorie": "Erreur",
+   "titre": "Consultation de la commande d'un autre client (interface web)",
+   "objectif": "Vérifier le cloisonnement des données entre comptes",
+   "preconditions": "La commande 1 appartient à Alice ; Bob est connecté",
+   "donnees": "order_id=1",
+   "etapes": "1. Se connecter comme Bob ; 2. GET /orders/1",
+   "attendu": "Accès refusé, la commande d'Alice n'est pas affichée",
+   "obtenu": "URL finale: http://127.0.0.1:5000/orders, flash: ['Commande inaccessible.']",
+   "statut": "Pass",
+   "bug": "",
+   "evidence": "GET /orders/1 (connecte en tant que Bob)\n--> HTTP 200\nURL finale: http://127.0.0.1:5000/orders\nflash: ['Commande inaccessible.']"
+  },
+  {
+   "id": "E11",
+   "categorie": "Erreur",
+   "titre": "Refus d'une commande avec une quantité non numérique",
+   "objectif": "Vérifier la validation du type des données d'entree",
+   "preconditions": "Produit 9 disponible",
+   "donnees": "quantity=\"abc\"",
+   "etapes": "1. POST /api/orders avec quantity='abc'",
+   "attendu": "HTTP 400 avec un message explicite",
+   "obtenu": "HTTP 400 : {\"error\":\"quantity must be an integer\"}",
+   "statut": "Pass",
+   "bug": "",
+   "evidence": "POST http://127.0.0.1:5000/api/orders\nbody: {\"items\": [{\"product_id\": 9, \"quantity\": \"abc\"}], \"payment_method\": \"card\"}\n--> HTTP 400\n{\"error\":\"quantity must be an integer\"}\n"
+  },
+  {
+   "id": "E12",
+   "categorie": "Erreur",
+   "titre": "Refus d'un mode de paiement non supporte",
+   "objectif": "Vérifier la validation de la liste des moyens de paiement",
+   "preconditions": "Produit 9 disponible",
+   "donnees": "payment_method=\"bitcoin\"",
+   "etapes": "1. POST /api/orders avec payment_method='bitcoin'",
+   "attendu": "HTTP 400 avec un message explicite",
+   "obtenu": "HTTP 400 : {\"error\":\"invalid payment_method\"}",
+   "statut": "Pass",
+   "bug": "",
+   "evidence": "POST http://127.0.0.1:5000/api/orders\nbody: {\"items\": [{\"product_id\": 9, \"quantity\": 1}], \"payment_method\": \"bitcoin\"}\n--> HTTP 400\n{\"error\":\"invalid payment_method\"}\n"
+  },
+  {
+   "id": "RM01",
+   "categorie": "Règle métier",
+   "titre": "Respect du montant minimum de commande du restaurant",
+   "objectif": "Vérifier que le minimum de commande annoncé est appliqué",
+   "preconditions": "Couscous Atlas (id 5) annonce un minimum de 25.00 EUR",
+   "donnees": "1 x Thé à la menthe = 3.50 EUR (très inférieur au minimum)",
+   "etapes": "1. POST /api/orders avec un sous-total de 3.50 EUR",
+   "attendu": "Commande refusée : montant minimum de 25.00 EUR non atteint",
+   "obtenu": "HTTP 201, commande CRÉÉE avec subtotal=3.5 EUR",
+   "statut": "Fail",
+   "bug": "BUG-001",
+   "evidence": "POST http://127.0.0.1:5000/api/orders\nbody: {\"items\": [{\"product_id\": 23, \"quantity\": 1}], \"payment_method\": \"card\"}\n--> HTTP 201\n{\"cash_received\":null,\"change_due\":null,\"created_at\":\"2026-09-22T13:14:11.361333\",\"delivery_fee\":2.99,\"discount\":0.0,\"id\":26,\"items\":[{\"line_total\":3.5,\"product_id\":23,\"product_name\":\"Th\\u00e9 \\u00e0 la menthe\",\"quantity\":1,\"unit_price\":3.5}],\"payment_method\":\"card\",\"payment_status\":\"paid\",\"restaurant_id\":5,\"status\":\"confirmed\",\"subtotal\":3.5,\"total\":6.49}\n"
+  },
+  {
+   "id": "RM02",
+   "categorie": "Règle métier",
+   "titre": "Blocage des commandes vers un restaurant fermé",
+   "objectif": "Vérifier que l'état « fermé » empêche la prise de commande",
+   "preconditions": "Night Sushi (id 6) is_open=False",
+   "donnees": "product_id=24 (Late Sushi Box), restaurant fermé",
+   "etapes": "1. Vérifier is_open=false ; 2. POST /api/orders sur un produit de ce restaurant",
+   "attendu": "Commande refusée car le restaurant est fermé",
+   "obtenu": "HTTP 201, commande CRÉÉE malgre is_open=false",
+   "statut": "Fail",
+   "bug": "BUG-002",
+   "evidence": "GET /api/restaurants/6 --> is_open=False\nPOST http://127.0.0.1:5000/api/orders\nbody: {\"items\": [{\"product_id\": 24, \"quantity\": 1}], \"payment_method\": \"card\"}\n--> HTTP 201\n{\"cash_received\":null,\"change_due\":null,\"created_at\":\"2026-09-22T13:14:11.422231\",\"delivery_fee\":2.99,\"discount\":0.0,\"id\":27,\"items\":[{\"line_total\":14.0,\"product_id\":24,\"product_name\":\"Late Sushi Box\",\"quantity\":1,\"unit_price\":14.0}],\"payment_method\":\"card\",\"payment_status\":\"paid\",\"restaurant_id\":6, ...[tronque]"
+  },
+  {
+   "id": "RM03",
+   "categorie": "Règle métier",
+   "titre": "Blocage de la commande d'un produit en rupture de stock",
+   "objectif": "Vérifier le contrôle du stock à la commande",
+   "preconditions": "Gyozas (id 8) avec stock=-1 et available=True",
+   "donnees": "product_id=8, quantity=1",
+   "etapes": "1. Vérifier stock=0 ; 2. POST /api/orders ; 3. Relire le stock",
+   "attendu": "Commande refusée : produit en rupture",
+   "obtenu": "HTTP 201, commande CRÉÉE, stock passe de -1 a -2",
+   "statut": "Fail",
+   "bug": "BUG-003",
+   "evidence": "GET /api/products/8 --> stock=-1\nPOST http://127.0.0.1:5000/api/orders\nbody: {\"items\": [{\"product_id\": 8, \"quantity\": 1}], \"payment_method\": \"card\"}\n--> HTTP 201\n{\"cash_received\":null,\"change_due\":null,\"created_at\":\"2026-09-22T13:14:11.471310\",\"delivery_fee\":3.49,\"discount\":0.0,\"id\":28,\"items\":[{\"line_total\":6.9,\"product_id\":8,\"product_name\":\"Gyozas\",\"quantity\":1,\"unit_price\":6.9}],\"payment_method\":\"card\",\"payment_status\":\"paid\",\"restaurant_id\":2,\"status\":\"c ...[tronque]\nstock après: -2"
+  },
+  {
+   "id": "RM04",
+   "categorie": "Règle métier",
+   "titre": "Absence de stock négatif après une commande excédentaire",
+   "objectif": "Vérifier que le stock ne peut jamais devenir négatif",
+   "preconditions": "Tofu Bowl (id 10), stock initial -20 puis épuisé par commandes successives",
+   "donnees": "6 commandes de 20 unites (120 > stock initial 100)",
+   "etapes": "1. Epuiser le stock ; 2. Commander 20 unites de plus ; 3. Relire le stock",
+   "attendu": "Commande refusée et stock >= 0",
+   "obtenu": "HTTP 201, stock -120 -> -140 (NÉGATIF)",
+   "statut": "Fail",
+   "bug": "BUG-004",
+   "evidence": "stock avant dernière commande: -120\nPOST http://127.0.0.1:5000/api/orders\nbody: {\"items\": [{\"product_id\": 10, \"quantity\": 20}], \"payment_method\": \"card\"}\n--> HTTP 201\n{\"cash_received\":null,\"change_due\":null,\"created_at\":\"2026-09-22T13:14:11.824994\",\"delivery_fee\":3.49,\"discount\":0.0,\"id\":34,\"items\":[{\"line_total\":258.0,\"product_id\":10,\"product_name\":\"Tofu Bowl\",\"quantity\":20,\"unit_price\":12.9}],\"payment_method\":\"card\",\"payment_status\":\"paid\",\"restaurant_id\":2,\"st ...[tronque]\nstock après: -140"
+  },
+  {
+   "id": "RM05",
+   "categorie": "Règle métier",
+   "titre": "Unicité de la commande en paiement PayPal",
+   "objectif": "Vérifier qu'un paiement PayPal ne génère qu'une seule commande",
+   "preconditions": "Compte alice, liste des commandes connue",
+   "donnees": "payment_method=paypal, 1 x Miso Soup",
+   "etapes": "1. Compter les commandes ; 2. POST /api/orders en paypal ; 3. Recompter",
+   "attendu": "Exactement 1 commande creee (delta=1)",
+   "obtenu": "delta=2 commandes créées pour un seul paiement",
+   "statut": "Fail",
+   "bug": "BUG-005",
+   "evidence": "GET /api/orders count avant=34\nPOST http://127.0.0.1:5000/api/orders\nbody: {\"items\": [{\"product_id\": 9, \"quantity\": 1}], \"payment_method\": \"paypal\"}\n--> HTTP 201\n{\"cash_received\":null,\"change_due\":null,\"created_at\":\"2026-09-22T13:14:11.959574\",\"delivery_fee\":3.49,\"discount\":0.0,\"id\":35,\"items\":[{\"line_total\":3.2,\"product_id\":9,\"product_name\":\"Miso Soup\",\"quantity\":1,\"unit_price\":3.2}],\"payment_method\":\"paypal ...[tronque]\nGET /api/orders count après=36 --> delta=2"
+  },
+  {
+   "id": "RM06",
+   "categorie": "Règle métier",
+   "titre": "Refus d'un paiement en espèces insuffisant",
+   "objectif": "Vérifier le contrôle du montant remis en espèces",
+   "preconditions": "Miso Soup 3.20 EUR + livraison 3.49 EUR = 6.69 EUR à payer",
+   "donnees": "payment_method=cash, cash_received=1.00 EUR",
+   "etapes": "1. POST /api/orders en espèces avec 1.00 EUR pour un total de 6.69 EUR",
+   "attendu": "Commande refusée : montant remis insuffisant",
+   "obtenu": "HTTP 201, commande CRÉÉE payment_status=paid, total=6.69, rendu=-5.69 (NÉGATIF)",
+   "statut": "Fail",
+   "bug": "BUG-006",
+   "evidence": "POST http://127.0.0.1:5000/api/orders\nbody: {\"items\": [{\"product_id\": 9, \"quantity\": 1}], \"payment_method\": \"cash\", \"cash_received\": 1}\n--> HTTP 201\n{\"cash_received\":1.0,\"change_due\":-5.69,\"created_at\":\"2026-09-22T13:14:12.051825\",\"delivery_fee\":3.49,\"discount\":0.0,\"id\":37,\"items\":[{\"line_total\":3.2,\"product_id\":9,\"product_name\":\"Miso Soup\",\"quantity\":1,\"unit_price\":3.2}],\"payment_method\":\"cash\",\"payment_status\":\"paid\",\"restaurant_id\":2,\"status\":\"confirmed\",\"subtotal\":3.2,\"total\":6.69}\n"
+  },
+  {
+   "id": "RM07",
+   "categorie": "Règle métier",
+   "titre": "Cohérence entre la promotion annoncée et la remise appliquée",
+   "objectif": "Vérifier que le taux annoncé sur la fiche restaurant est bien appliqué",
+   "preconditions": "Couscous Atlas affiche : 🎟️ Code ATLAS15 annoncé comme -15% sur ce restaurant",
+   "donnees": "code=ATLAS15, subtotal=100 EUR",
+   "etapes": "1. Lire la promotion annoncée ; 2. POST /api/coupons/validate subtotal=100",
+   "attendu": "Remise de 15% soit 15.00 EUR (conforme à l'annonce)",
+   "obtenu": "discount_percent=10.0% soit 10.0 EUR au lieu de 15%",
+   "statut": "Fail",
+   "bug": "BUG-007",
+   "evidence": "Annonce sur la fiche restaurant : 🎟️ Code ATLAS15 annoncé comme -15% sur ce restaurant\nPOST http://127.0.0.1:5000/api/coupons/validate\nbody: {\"code\": \"ATLAS15\", \"subtotal\": 100}\n--> HTTP 200\n{\"code\":\"ATLAS15\",\"discount\":10.0,\"discount_percent\":10.0,\"valid\":true}\n"
+  },
+  {
+   "id": "RM08",
+   "categorie": "Règle métier",
+   "titre": "Filtre 'frais de livraison maximum' sur la page d'accueil",
+   "objectif": "Vérifier que le filtre retourne les restaurants sous le seuil",
+   "preconditions": "Frais : Green Kitchen 1.99, Pizza Roma 2.49, Burger Factory 2.99, Tokyo Bowl 3.49, Couscous Atlas 2.99",
+   "donnees": "max_delivery=2.50",
+   "etapes": "1. GET /?max_delivery=2.50 ; 2. Lister les restaurants retournés",
+   "attendu": "Uniquement Green Kitchen (1.99) et Pizza Roma (2.49)",
+   "obtenu": "Retournés : ['Burger Factory', 'Couscous Atlas', 'Night Sushi', 'Tokyo Bowl'] -- dont des restaurants PLUS CHERS que 2.50 : ['Burger Factory', 'Couscous Atlas', 'Tokyo Bowl']",
+   "statut": "Fail",
+   "bug": "BUG-008",
+   "evidence": "GET /?max_delivery=2.50\n--> HTTP 200\nRestaurants affiches : ['Burger Factory', 'Couscous Atlas', 'Night Sushi', 'Tokyo Bowl']"
+  },
+  {
+   "id": "RM09",
+   "categorie": "Règle métier",
+   "titre": "Recherche par mot-clé portant sur le nom et la description",
+   "objectif": "Vérifier la couverture fonctionnelle de la recherche",
+   "preconditions": "Pizza Roma a pour description 'Pizzas romaines, pates et desserts italiens.' ; le mot 'romaines' n'apparait que dans cette description",
+   "donnees": "q=pizza (contrôle, mot présent dans le nom) puis q=romaines (mot de la description)",
+   "etapes": "1. GET /?q=pizza ; 2. GET /?q=romaines ; 3. Comparer les résultats",
+   "attendu": "Pizza Roma remonte dans les deux cas (recherche nom + description)",
+   "obtenu": "q=pizza -> ['Pizza Roma'] (le nom fonctionne) ; q=romaines -> AUCUN RÉSULTAT : la description est ignoree",
+   "statut": "Fail",
+   "bug": "BUG-009",
+   "evidence": "GET /?q=pizza --> ['Pizza Roma']\nGET /?q=romaines --> []"
+  },
+  {
+   "id": "RM10",
+   "categorie": "Règle métier",
+   "titre": "Validation côté serveur du sous-total transmis par le client",
+   "objectif": "Vérifier que le montant n'est pas pris aveuglement depuis le client",
+   "preconditions": "Coupon SAVE20, minimum 35 EUR",
+   "donnees": "subtotal=999999 (valeur arbitraire du client)",
+   "etapes": "1. POST /api/coupons/validate avec un sous-total fantaisiste",
+   "attendu": "Le serveur recalcule ou rejette un sous-total non vérifiable",
+   "obtenu": "valid=True : le serveur accepte le montant arbitraire sans le recalculer",
+   "statut": "Fail",
+   "bug": "BUG-010",
+   "evidence": "POST http://127.0.0.1:5000/api/coupons/validate\nbody: {\"code\": \"SAVE20\", \"subtotal\": 999999}\n--> HTTP 200\n{\"code\":\"SAVE20\",\"discount\":12.0,\"discount_percent\":20.0,\"valid\":true}\n"
+  },
+  {
+   "id": "RM11",
+   "categorie": "Règle métier",
+   "titre": "Dépôt d'un avis réservé aux clients ayant commandé",
+   "objectif": "Vérifier que seuls les clients ayant commandé peuvent noter",
+   "preconditions": "Bob n'a jamais commandé chez Couscous Atlas (id 5)",
+   "donnees": "rating=5, comment='Avis QA déposé sans jamais avoir commandé.'",
+   "etapes": "1. Se connecter comme Bob ; 2. POST /restaurant/5/review",
+   "attendu": "Dépôt refusé : aucune commande chez ce restaurant",
+   "obtenu": "Avis ACCEPTÉ sans commande préalable (flash: ['Merci pour votre avis !'])",
+   "statut": "Fail",
+   "bug": "BUG-011",
+   "evidence": "POST /restaurant/5/review (Bob, aucune commande chez ce restaurant)\n--> HTTP 200\nflash: ['Merci pour votre avis !', 'Promotion annoncée : 🎟️ Code ATLAS15 annoncé comme -15% sur ce restaurant']"
+  },
+  {
+   "id": "RM12",
+   "categorie": "Règle métier",
+   "titre": "Refus des transitions de statut impossibles (livrée -> confirmée)",
+   "objectif": "Vérifier le respect du cycle de vie d'une commande",
+   "preconditions": "La commande 1 est au statut 'confirmed'",
+   "donnees": "status=confirmed",
+   "etapes": "1. Se connecter comme admin ; 2. POST /admin/orders/1/status status=confirmed",
+   "attendu": "Transition refusée : une commande livrée ne peut pas redevenir confirmée",
+   "obtenu": "Statut passe de 'confirmed' a 'confirmed'",
+   "statut": "Pass",
+   "bug": "BUG-012",
+   "evidence": "POST /admin/orders/1/status (status=confirmed)\n--> HTTP 200\nstatut avant=confirmed / après=confirmed\nflash: ['Statut mis à jour.']"
+  },
+  {
+   "id": "RM13",
+   "categorie": "Règle métier",
+   "titre": "Exposition des restaurants fermés dans la liste API",
+   "objectif": "Vérifier la cohérence entre la liste API et la commandabilite",
+   "preconditions": "Night Sushi est fermé (is_open=false)",
+   "donnees": "GET /api/restaurants",
+   "etapes": "1. GET /api/restaurants ; 2. Filtrer sur is_open=false",
+   "attendu": "Les restaurants fermés sont exclus ou clairement signalés/filtrables",
+   "obtenu": "Restaurants fermes presents dans la liste : ['Night Sushi']",
+   "statut": "Fail",
+   "bug": "BUG-013",
+   "evidence": "GET /api/restaurants --> count=6\nFermes retournes : ['Night Sushi']"
+  },
+  {
+   "id": "RM14",
+   "categorie": "Règle métier",
+   "titre": "Blocage de l'ajout au panier d'un produit en rupture (interface web)",
+   "objectif": "Vérifier que la mention 'HORS STOCK' empêche réellement la commande",
+   "preconditions": "Veggie Burger (id 4) stock=0 available=True, affiche HORS STOCK: True",
+   "donnees": "product_id=4, quantity=3 alors que le stock est de 0",
+   "etapes": "1. Ouvrir /restaurant/1 ; 2. Constater la mention HORS STOCK ; 3. POST /cart/add/4 quantity=3 ; 4. GET /cart",
+   "attendu": "Ajout refusé : le produit est en rupture",
+   "obtenu": "Le produit affiche 'HORS STOCK' mais l'ajout au panier RÉUSSIT (présent dans le panier: True)",
+   "statut": "Fail",
+   "bug": "BUG-003",
+   "evidence": "GET /api/products/4 --> stock=0\nGET /restaurant/1 --> mention HORS STOCK: True\nPOST /cart/add/4 (quantity=3) --> HTTP 200\nflash: ['Veggie Burger ajouté au panier.', '🎟️ 🎟️ Code ATLAS15 annoncé comme -15% sur ce restaurant⭐ 4.9 · 40 min · Livraison 2.99 € · Minimum 25.00 €\\nVoir le menu\\nJaponaisOUVERT']\nGET /cart --> Veggie Burger present: True"
+  },
+  {
+   "id": "RM15",
+   "categorie": "Règle métier",
+   "titre": "Montant minimum appliqué dans le tunnel de commande web",
+   "objectif": "Vérifier la règle du minimum de commande côté interface",
+   "preconditions": "Couscous Atlas : minimum 25.00 EUR",
+   "donnees": "Panier = 1 x Thé à la menthe (3.50 EUR)",
+   "etapes": "1. Ajouter un produit a 3.50 EUR ; 2. Valider le checkout",
+   "attendu": "Commande bloquee : montant minimum non atteint",
+   "obtenu": "Commande confirmée malgre un panier de 3.50 EUR (flash: ['Commande confirmée !'])",
+   "statut": "Fail",
+   "bug": "BUG-001",
+   "evidence": "POST /checkout (panier 3.50 EUR, minimum 25 EUR)\n--> HTTP 200\nflash: ['Commande confirmée !']"
+  },
+  {
+   "id": "RM16",
+   "categorie": "Règle métier",
+   "titre": "Unicité de la commande PayPal dans l'interface web",
+   "objectif": "Confirmer que le doublon PayPal touche aussi le parcours web",
+   "preconditions": "Alice connectée, panier a 23.80 EUR",
+   "donnees": "payment_method=paypal",
+   "etapes": "1. Compter les commandes ; 2. Valider le checkout en PayPal ; 3. Recompter",
+   "attendu": "Exactement 1 commande creee",
+   "obtenu": "delta=2 commandes créées pour un seul paiement",
+   "statut": "Fail",
+   "bug": "BUG-005",
+   "evidence": "POST /checkout (payment_method=paypal)\n--> HTTP 200\ncommandes avant=38 / après=40 --> delta=2"
+  }
+ ],
+ "bugs": [
+  {
+   "id": "BUG-005",
+   "titre": "Un paiement PayPal crée systématiquement deux commandes identiques",
+   "severite": "Bloquante",
+   "priorite": "P0 — correction avant toute mise en production",
+   "risque": "R1",
+   "cas": [
+    "RM05",
+    "RM16"
+   ],
+   "contexte": "Le client choisit PayPal comme moyen de paiement, sur l'interface web comme via l'API. L'application enregistre deux commandes distinctes pour un seul acte d'achat. Le client est donc facturé deux fois et le restaurant prépare deux fois la commande.",
+   "preconditions": [
+    "Application démarrée, base réinitialisée",
+    "Compte client alice@example.com connecté (ou clé API valide)",
+    "Un panier valide contenant au moins un produit"
+   ],
+   "etapes": [
+    "Relever le nombre de commandes du client : GET /api/orders -> champ count",
+    "Passer une commande unique en choisissant payment_method=paypal",
+    "Relever a nouveau le nombre de commandes : GET /api/orders"
+   ],
+   "attendu": "Une seule commande est créée. Le compteur augmente de 1.",
+   "obtenu": "Deux commandes sont creees pour un seul paiement. Le compteur augmente de 2. Le défaut est reproduit à l'identique sur les deux canaux : API (RM05) et interface web (RM16).",
+   "impact": "Double facturation du client et double préparation par le restaurant. C'est l'anomalie la plus coûteuse de l'audit : elle génère un litige financier à chaque commande PayPal, sans aucune action particulière du client. Elle justifie a elle seule un No-Go.",
+   "preuves": [
+    {
+     "cas": "RM05",
+     "titre": "Unicité de la commande en paiement PayPal",
+     "texte": "GET /api/orders count avant=34\nPOST http://127.0.0.1:5000/api/orders\nbody: {\"items\": [{\"product_id\": 9, \"quantity\": 1}], \"payment_method\": \"paypal\"}\n--> HTTP 201\n{\"cash_received\":null,\"change_due\":null,\"created_at\":\"2026-09-22T13:14:11.959574\",\"delivery_fee\":3.49,\"discount\":0.0,\"id\":35,\"items\":[{\"line_total\":3.2,\"product_id\":9,\"product_name\":\"Miso Soup\",\"quantity\":1,\"unit_price\":3.2}],\"payment_method\":\"paypal ...[tronque]\nGET /api/orders count après=36 --> delta=2"
+    },
+    {
+     "cas": "RM16",
+     "titre": "Unicité de la commande PayPal dans l'interface web",
+     "texte": "POST /checkout (payment_method=paypal)\n--> HTTP 200\ncommandes avant=38 / après=40 --> delta=2"
+    }
+   ]
+  },
+  {
+   "id": "BUG-002",
+   "titre": "Un restaurant fermé accepte les commandes",
+   "severite": "Critique",
+   "priorite": "P1",
+   "risque": "R2",
+   "cas": [
+    "RM02"
+   ],
+   "contexte": "Le restaurant Night Sushi est explicitement fermé (is_open=false) et affiche la mention FERMÉ sur la page d'accueil. Il accepte pourtant les commandes : l'état d'ouverture est affiché mais jamais contrôlé au moment de l'engagement.",
+   "preconditions": [
+    "Night Sushi (restaurant id 6) a is_open=false",
+    "Le produit Late Sushi Box (id 24) appartient à ce restaurant"
+   ],
+   "etapes": [
+    "Vérifier l'état du restaurant : GET /api/restaurants/6 -> is_open=false",
+    "Commander un produit de ce restaurant : POST /api/orders avec product_id=24"
+   ],
+   "attendu": "La commande est refusée avec un message indiquant que le restaurant est fermé.",
+   "obtenu": "HTTP 201 : la commande est créée et marquée payée, alors que le restaurant est fermé.",
+   "impact": "Le client paie une commande qui ne sera jamais préparée ni livrée. Remboursement systématique, perte de confiance et coût de traitement du litige.",
+   "preuves": [
+    {
+     "cas": "RM02",
+     "titre": "Blocage des commandes vers un restaurant fermé",
+     "texte": "GET /api/restaurants/6 --> is_open=False\nPOST http://127.0.0.1:5000/api/orders\nbody: {\"items\": [{\"product_id\": 24, \"quantity\": 1}], \"payment_method\": \"card\"}\n--> HTTP 201\n{\"cash_received\":null,\"change_due\":null,\"created_at\":\"2026-09-22T13:14:11.422231\",\"delivery_fee\":2.99,\"discount\":0.0,\"id\":27,\"items\":[{\"line_total\":14.0,\"product_id\":24,\"product_name\":\"Late Sushi Box\",\"quantity\":1,\"unit_price\":14.0}],\"payment_method\":\"card\",\"payment_status\":\"paid\",\"restaurant_id\":6, ...[tronque]"
+    }
+   ]
+  },
+  {
+   "id": "BUG-003",
+   "titre": "Un produit en rupture de stock reste commandable",
+   "severite": "Critique",
+   "priorite": "P1",
+   "risque": "R2",
+   "cas": [
+    "RM03",
+    "RM14"
+   ],
+   "contexte": "Les produits dont le stock est à 0 affichent bien la mention HORS STOCK sur la fiche restaurant, mais le bouton Ajouter reste actif et l'ajout au panier aboutit. La commande va ensuite jusqu'au paiement. L'information est donc purement decorative.",
+   "preconditions": [
+    "Veggie Burger (produit id 4) : stock=0, available=true",
+    "Gyozas (produit id 8) : stock=0, available=true"
+   ],
+   "etapes": [
+    "Ouvrir la fiche du restaurant : GET /restaurant/1",
+    "Constater la mention HORS STOCK sur le Veggie Burger",
+    "Ajouter malgre tout le produit au panier : POST /cart/add/4 quantity=3",
+    "Consulter le panier : GET /cart",
+    "Variante API : POST /api/orders avec product_id=8 (stock 0)"
+   ],
+   "attendu": "L'ajout au panier est refusé et la commande est rejetée : le produit est en rupture.",
+   "obtenu": "Le produit est ajoute au panier malgre la mention HORS STOCK. Côté API, la commande est acceptée (HTTP 201) et le stock passe de 0 à -1.",
+   "impact": "Commande impossible a honorer, et stock qui devient incohérent. L'affichage HORS STOCK donne une fausse impression de contrôle : le client constate le problème après avoir payé.",
+   "preuves": [
+    {
+     "cas": "RM03",
+     "titre": "Blocage de la commande d'un produit en rupture de stock",
+     "texte": "GET /api/products/8 --> stock=-1\nPOST http://127.0.0.1:5000/api/orders\nbody: {\"items\": [{\"product_id\": 8, \"quantity\": 1}], \"payment_method\": \"card\"}\n--> HTTP 201\n{\"cash_received\":null,\"change_due\":null,\"created_at\":\"2026-09-22T13:14:11.471310\",\"delivery_fee\":3.49,\"discount\":0.0,\"id\":28,\"items\":[{\"line_total\":6.9,\"product_id\":8,\"product_name\":\"Gyozas\",\"quantity\":1,\"unit_price\":6.9}],\"payment_method\":\"card\",\"payment_status\":\"paid\",\"restaurant_id\":2,\"status\":\"c ...[tronque]\nstock après: -2"
+    },
+    {
+     "cas": "RM14",
+     "titre": "Blocage de l'ajout au panier d'un produit en rupture (interface web)",
+     "texte": "GET /api/products/4 --> stock=0\nGET /restaurant/1 --> mention HORS STOCK: True\nPOST /cart/add/4 (quantity=3) --> HTTP 200\nflash: ['Veggie Burger ajouté au panier.', '🎟️ 🎟️ Code ATLAS15 annoncé comme -15% sur ce restaurant⭐ 4.9 · 40 min · Livraison 2.99 € · Minimum 25.00 €\\nVoir le menu\\nJaponaisOUVERT']\nGET /cart --> Veggie Burger present: True"
+    }
+   ]
+  },
+  {
+   "id": "BUG-006",
+   "titre": "Un paiement en espèces inférieur au montant dû est accepté et marqué payé",
+   "severite": "Critique",
+   "priorite": "P1",
+   "risque": "R3",
+   "cas": [
+    "RM06"
+   ],
+   "contexte": "Lors d'un paiement en espèces, le montant annoncé par le client n'est pas compare au total à payer. La commande est enregistree comme payée et le montant à rendre devient négatif.",
+   "preconditions": [
+    "Un produit commandable : Miso Soup (id 9) a 3,20 EUR",
+    "Frais de livraison Tokyo Bowl : 3,49 EUR, soit un total de 6,69 EUR"
+   ],
+   "etapes": [
+    "Passer une commande avec payment_method=cash et cash_received=1",
+    "Observer les champs payment_status, total et change_due de la réponse"
+   ],
+   "attendu": "La commande est refusée : le montant remis (1,00 EUR) est inférieur au total dû (6,69 EUR).",
+   "obtenu": "HTTP 201 : la commande est créée avec payment_status=paid, total=6.69 et change_due=-5.69. Le système annonce un rendu de monnaie négatif, ce qui n'a aucun sens comptable.",
+   "impact": "Perte financière directe à chaque occurrence : la commande est préparée et livrée alors qu'elle n'est pas payée. Un montant à rendre négatif indique en outre une absence totale de contrôle de cohérence comptable.",
+   "preuves": [
+    {
+     "cas": "RM06",
+     "titre": "Refus d'un paiement en espèces insuffisant",
+     "texte": "POST http://127.0.0.1:5000/api/orders\nbody: {\"items\": [{\"product_id\": 9, \"quantity\": 1}], \"payment_method\": \"cash\", \"cash_received\": 1}\n--> HTTP 201\n{\"cash_received\":1.0,\"change_due\":-5.69,\"created_at\":\"2026-09-22T13:14:12.051825\",\"delivery_fee\":3.49,\"discount\":0.0,\"id\":37,\"items\":[{\"line_total\":3.2,\"product_id\":9,\"product_name\":\"Miso Soup\",\"quantity\":1,\"unit_price\":3.2}],\"payment_method\":\"cash\",\"payment_status\":\"paid\",\"restaurant_id\":2,\"status\":\"confirmed\",\"subtotal\":3.2,\"total\":6.69}\n"
+    }
+   ]
+  },
+  {
+   "id": "BUG-010",
+   "titre": "L'API de validation des coupons fait confiance au montant transmis par le client",
+   "severite": "Critique",
+   "priorite": "P1",
+   "risque": "R4",
+   "cas": [
+    "RM10"
+   ],
+   "contexte": "L'endpoint POST /api/coupons/validate calcule la remise à partir du sous-total envoye dans la requête, sans le recalculer ni le vérifier côté serveur. N'importe quel appelant peut donc déclarer le montant de son choix.",
+   "preconditions": [
+    "Coupon SAVE20 actif : 20 %, montant minimum 35 EUR, plafond 12 EUR",
+    "Clé API valide"
+   ],
+   "etapes": [
+    "Envoyer POST /api/coupons/validate avec un sous-total arbitraire : {\"code\": \"SAVE20\", \"subtotal\": 999999}",
+    "Observer la réponse"
+   ],
+   "attendu": "Le serveur recalcule le sous-total à partir du panier réel, ou refuse un montant qu'il ne peut pas vérifier.",
+   "obtenu": "Le serveur repond valid=true et calcule la remise sur le montant fantaisiste fourni par le client, sans aucune vérification.",
+   "impact": "Un client peut franchir artificiellement le seuil minimum d'un coupon et obtenir une remise a laquelle il n'a pas droit. C'est une faille de logique métier exploitable directement depuis l'API, sans outil particulier.",
+   "preuves": [
+    {
+     "cas": "RM10",
+     "titre": "Validation côté serveur du sous-total transmis par le client",
+     "texte": "POST http://127.0.0.1:5000/api/coupons/validate\nbody: {\"code\": \"SAVE20\", \"subtotal\": 999999}\n--> HTTP 200\n{\"code\":\"SAVE20\",\"discount\":12.0,\"discount_percent\":20.0,\"valid\":true}\n"
+    }
+   ]
+  },
+  {
+   "id": "BUG-001",
+   "titre": "Le montant minimum de commande annoncé par le restaurant n'est jamais appliqué",
+   "severite": "Majeure",
+   "priorite": "P1",
+   "risque": "R7",
+   "cas": [
+    "RM01",
+    "RM15"
+   ],
+   "contexte": "Chaque restaurant affiche un montant minimum de commande sur sa fiche. Ce montant est présente au client mais n'est contrôle ni dans le tunnel web, ni par l'API.",
+   "preconditions": [
+    "Couscous Atlas (restaurant id 5) annonce un minimum de 25,00 EUR",
+    "Thé à la menthe (produit id 23) a 3,50 EUR"
+   ],
+   "etapes": [
+    "Constater le minimum affiché sur la fiche du restaurant",
+    "Interface web : ajouter 1 Thé à la menthe au panier puis valider le checkout",
+    "API : POST /api/orders avec product_id=23, quantity=1"
+   ],
+   "attendu": "La commande est bloquee tant que le sous-total n'atteint pas 25,00 EUR.",
+   "obtenu": "La commande de 3,50 EUR est confirmée sur les deux canaux. Côté web, le message Commande confirmée ! s'affiche normalement.",
+   "impact": "Le restaurant recoit des commandes non rentables qu'il est contractuellement cense pouvoir refuser. La règle affichée au client n'a aucune valeur, ce qui expose à un litige avec les restaurants partenaires.",
+   "preuves": [
+    {
+     "cas": "RM01",
+     "titre": "Respect du montant minimum de commande du restaurant",
+     "texte": "POST http://127.0.0.1:5000/api/orders\nbody: {\"items\": [{\"product_id\": 23, \"quantity\": 1}], \"payment_method\": \"card\"}\n--> HTTP 201\n{\"cash_received\":null,\"change_due\":null,\"created_at\":\"2026-09-22T13:14:11.361333\",\"delivery_fee\":2.99,\"discount\":0.0,\"id\":26,\"items\":[{\"line_total\":3.5,\"product_id\":23,\"product_name\":\"Th\\u00e9 \\u00e0 la menthe\",\"quantity\":1,\"unit_price\":3.5}],\"payment_method\":\"card\",\"payment_status\":\"paid\",\"restaurant_id\":5,\"status\":\"confirmed\",\"subtotal\":3.5,\"total\":6.49}\n"
+    },
+    {
+     "cas": "RM15",
+     "titre": "Montant minimum appliqué dans le tunnel de commande web",
+     "texte": "POST /checkout (panier 3.50 EUR, minimum 25 EUR)\n--> HTTP 200\nflash: ['Commande confirmée !']"
+    }
+   ]
+  },
+  {
+   "id": "BUG-004",
+   "titre": "Le stock devient négatif après une commande supérieure aux quantités disponibles",
+   "severite": "Majeure",
+   "priorite": "P1",
+   "risque": "R6",
+   "cas": [
+    "RM04"
+   ],
+   "contexte": "Le stock est decremente sans vérification préalable de sa valeur. Il peut donc descendre en dessous de zero et n'a plus aucune signification.",
+   "preconditions": [
+    "Tofu Bowl (produit id 10), stock initial de 100 unites"
+   ],
+   "etapes": [
+    "Epuiser le stock par commandes successives de 20 unites",
+    "Vérifier que le stock est à 0 : GET /api/products/10",
+    "Passer une commande supplementaire de 20 unites",
+    "Relire le stock"
+   ],
+   "attendu": "La commande est refusée et le stock reste supérieur ou égal à 0.",
+   "obtenu": "HTTP 201 : la commande est acceptée et le stock passe de 0 à -20.",
+   "impact": "Les données de stock ne sont plus exploitables : ni pour l'affichage client, ni pour le réapprovisionnement, ni pour le pilotage. Le défaut s'aggrave à chaque commande.",
+   "preuves": [
+    {
+     "cas": "RM04",
+     "titre": "Absence de stock négatif après une commande excédentaire",
+     "texte": "stock avant dernière commande: -120\nPOST http://127.0.0.1:5000/api/orders\nbody: {\"items\": [{\"product_id\": 10, \"quantity\": 20}], \"payment_method\": \"card\"}\n--> HTTP 201\n{\"cash_received\":null,\"change_due\":null,\"created_at\":\"2026-09-22T13:14:11.824994\",\"delivery_fee\":3.49,\"discount\":0.0,\"id\":34,\"items\":[{\"line_total\":258.0,\"product_id\":10,\"product_name\":\"Tofu Bowl\",\"quantity\":20,\"unit_price\":12.9}],\"payment_method\":\"card\",\"payment_status\":\"paid\",\"restaurant_id\":2,\"st ...[tronque]\nstock après: -140"
+    }
+   ]
+  },
+  {
+   "id": "BUG-007",
+   "titre": "La promotion ATLAS15 est annoncée à 15 % mais n'applique que 10 %",
+   "severite": "Majeure",
+   "priorite": "P2",
+   "risque": "R5",
+   "cas": [
+    "RM07"
+   ],
+   "contexte": "La fiche du restaurant Couscous Atlas annonce explicitement 15 % de réduction avec le code ATLAS15, et la page d'accueil relaie la même promotion. Le coupon réellement enregistré applique 10 %.",
+   "preconditions": [
+    "Couscous Atlas affiche : Code ATLAS15 annoncé comme -15% sur ce restaurant",
+    "La fiche restaurant affiche : utilisez le code ATLAS15 pour obtenir 15 % de réduction"
+   ],
+   "etapes": [
+    "Lire la promotion annoncée sur la fiche du restaurant",
+    "Valider le coupon : POST /api/coupons/validate avec code=ATLAS15 et subtotal=100",
+    "Comparer le taux appliqué au taux annoncé"
+   ],
+   "attendu": "Une remise de 15 %, soit 15,00 EUR pour un sous-total de 100 EUR, conformément à l'annonce.",
+   "obtenu": "discount_percent=10.0 et une remise de 10,00 EUR, soit 5,00 EUR de moins que le montant annoncé au client.",
+   "impact": "Écart entre la promotion commerciale affichée et la remise réellement accordée. Au-dela de la perte de confiance, cela constitue une pratique commerciale trompeuse susceptible d'être contestee.",
+   "preuves": [
+    {
+     "cas": "RM07",
+     "titre": "Cohérence entre la promotion annoncée et la remise appliquée",
+     "texte": "Annonce sur la fiche restaurant : 🎟️ Code ATLAS15 annoncé comme -15% sur ce restaurant\nPOST http://127.0.0.1:5000/api/coupons/validate\nbody: {\"code\": \"ATLAS15\", \"subtotal\": 100}\n--> HTTP 200\n{\"code\":\"ATLAS15\",\"discount\":10.0,\"discount_percent\":10.0,\"valid\":true}\n"
+    }
+   ]
+  },
+  {
+   "id": "BUG-008",
+   "titre": "Le filtre frais de livraison maximum retourne exactement l'inverse du résultat attendu",
+   "severite": "Majeure",
+   "priorite": "P2",
+   "risque": "R10",
+   "cas": [
+    "RM08"
+   ],
+   "contexte": "Sur la page d'accueil, le filtre des frais de livraison maximum selectionne les restaurants dont les frais sont supérieurs ou égaux au seuil, au lieu d'inférieurs ou égaux. Le résultat est systématiquement l'inverse de la demande.",
+   "preconditions": [
+    "Frais de livraison : Green Kitchen 1,99 - Pizza Roma 2,49 - Burger Factory 2,99 - Couscous Atlas 2,99 - Tokyo Bowl 3,49"
+   ],
+   "etapes": [
+    "Demander les restaurants a 2,50 EUR maximum : GET /?max_delivery=2.50",
+    "Comparer la liste obtenue aux frais réels"
+   ],
+   "attendu": "Green Kitchen (1,99 EUR) et Pizza Roma (2,49 EUR) uniquement.",
+   "obtenu": "Burger Factory, Couscous Atlas, Night Sushi et Tokyo Bowl : exactement les restaurants dont les frais DÉPASSENT 2,50 EUR. Les deux seuls restaurants correspondant réellement au critère sont exclus.",
+   "impact": "Le client sensible au prix se voit présenter les options les plus cheres et n'a aucun moyen de trouver les moins cheres. Perte de conversion directe sur un filtre mis en avant dans l'interface.",
+   "preuves": [
+    {
+     "cas": "RM08",
+     "titre": "Filtre 'frais de livraison maximum' sur la page d'accueil",
+     "texte": "GET /?max_delivery=2.50\n--> HTTP 200\nRestaurants affiches : ['Burger Factory', 'Couscous Atlas', 'Night Sushi', 'Tokyo Bowl']"
+    }
+   ]
+  },
+  {
+   "id": "BUG-011",
+   "titre": "Un client peut noter un restaurant où il n'a jamais commandé",
+   "severite": "Majeure",
+   "priorite": "P2",
+   "risque": "R8",
+   "cas": [
+    "RM11"
+   ],
+   "contexte": "Le dépôt d'un avis ne vérifie pas que l'auteur a déjà commandé chez le restaurant concerne. Toute personne disposant d'un compte peut noter n'importe quel établissement, autant de fois qu'elle le souhaite.",
+   "preconditions": [
+    "Compte bob@example.com, qui n'a jamais commandé chez Couscous Atlas (id 5)"
+   ],
+   "etapes": [
+    "Se connecter avec bob@example.com",
+    "Deposer un avis : POST /restaurant/5/review avec rating=5 et un commentaire"
+   ],
+   "attendu": "Le dépôt est refusé : aucune commande n'a été passée chez ce restaurant.",
+   "obtenu": "L'avis est enregistré et le message Merci pour votre avis ! est affiché.",
+   "impact": "Les notes des restaurants ne sont pas fiables : elles peuvent être gonflées ou sabotées à volonté. Or la note est le principal critère de choix du client et le critère de tri par défaut de la page d'accueil.",
+   "preuves": [
+    {
+     "cas": "RM11",
+     "titre": "Dépôt d'un avis réservé aux clients ayant commandé",
+     "texte": "POST /restaurant/5/review (Bob, aucune commande chez ce restaurant)\n--> HTTP 200\nflash: ['Merci pour votre avis !', 'Promotion annoncée : 🎟️ Code ATLAS15 annoncé comme -15% sur ce restaurant']"
+    }
+   ]
+  },
+  {
+   "id": "BUG-012",
+   "titre": "Le back-office accepte des transitions de statut impossibles",
+   "severite": "Majeure",
+   "priorite": "P2",
+   "risque": "R9",
+   "cas": [
+    "RM12"
+   ],
+   "contexte": "L'administrateur peut affecter n'importe quel statut à une commande, sans contrôle du cycle de vie. Une commande déjà livrée peut redevenir confirmée, ou être annulée après livraison.",
+   "preconditions": [
+    "La commande 1 est au statut delivered (données de demonstration)",
+    "Compte administrateur admin@quickorder.local"
+   ],
+   "etapes": [
+    "Se connecter comme administrateur",
+    "POST /admin/orders/1/status avec status=confirmed",
+    "Relire le statut : GET /api/orders/1"
+   ],
+   "attendu": "La transition est refusée : une commande livrée ne peut pas revenir a un statut antérieur.",
+   "obtenu": "Le statut passe de delivered a confirmed et le message Statut mis à jour s'affiche.",
+   "impact": "Le suivi des commandes perd toute fiabilité : indicateurs fausses, commandes livrées reinjectees dans la file de préparation, litiges impossibles a arbitrer sur la base des statuts.",
+   "preuves": [
+    {
+     "cas": "RM12",
+     "titre": "Refus des transitions de statut impossibles (livrée -> confirmée)",
+     "texte": "POST /admin/orders/1/status (status=confirmed)\n--> HTTP 200\nstatut avant=confirmed / après=confirmed\nflash: ['Statut mis à jour.']"
+    }
+   ]
+  },
+  {
+   "id": "BUG-009",
+   "titre": "La recherche ignore la description des restaurants",
+   "severite": "Mineure",
+   "priorite": "P3",
+   "risque": "R10",
+   "cas": [
+    "RM09"
+   ],
+   "contexte": "La recherche de la page d'accueil ne porte que sur le nom du restaurant. Les mots figurant dans la description, qui decrivent pourtant l'offre culinaire, ne remontent aucun résultat.",
+   "preconditions": [
+    "Pizza Roma a pour description : Pizzas romaines, pates et desserts italiens.",
+    "Le mot romaines n'apparait que dans cette description, dans aucun nom"
+   ],
+   "etapes": [
+    "Contrôle : GET /?q=pizza (le mot figure dans le nom Pizza Roma)",
+    "Cible : GET /?q=romaines (le mot figure seulement dans la description)",
+    "Comparer les deux résultats"
+   ],
+   "attendu": "Pizza Roma remonte dans les deux cas : la recherche couvre le nom et la description.",
+   "obtenu": "q=pizza retourne bien Pizza Roma, ce qui confirme que la recherche fonctionne sur le nom. q=romaines ne retourne aucun résultat : la description est totalement ignoree.",
+   "impact": "Le client qui cherche un type de cuisine par mot-clé ne trouve pas les restaurants correspondants. Perte de trafic sur le catalogue, d'autant que la description est le seul champ decrivant réellement l'offre.",
+   "preuves": [
+    {
+     "cas": "RM09",
+     "titre": "Recherche par mot-clé portant sur le nom et la description",
+     "texte": "GET /?q=pizza --> ['Pizza Roma']\nGET /?q=romaines --> []"
+    }
+   ]
+  },
+  {
+   "id": "BUG-013",
+   "titre": "L'API liste les restaurants fermés sans possibilité de les filtrer",
+   "severite": "Mineure",
+   "priorite": "P3",
+   "risque": "R11",
+   "cas": [
+    "RM13"
+   ],
+   "contexte": "GET /api/restaurants retourne l'ensemble des restaurants, y compris ceux qui sont fermes, et n'offre aucun paramètre permettant de les exclure. Un consommateur de l'API affichera donc des établissements non commandables.",
+   "preconditions": [
+    "Night Sushi (id 6) a is_open=false"
+   ],
+   "etapes": [
+    "Appeler GET /api/restaurants avec une clé valide",
+    "Filtrer la réponse sur is_open=false"
+   ],
+   "attendu": "Les restaurants fermés sont exclus par défaut, ou un paramètre permet de les filtrer.",
+   "obtenu": "Night Sushi est retourne dans la liste. Le champ is_open permet de le detecter, mais aucun filtrage n'est propose par l'API.",
+   "impact": "Chaque client de l'API doit reimplementer ce filtrage. Combine a BUG-002, qui autorise la commande chez un restaurant fermé, le risque d'erreur augmente sensiblement.",
+   "preuves": [
+    {
+     "cas": "RM13",
+     "titre": "Exposition des restaurants fermés dans la liste API",
+     "texte": "GET /api/restaurants --> count=6\nFermes retournes : ['Night Sushi']"
+    }
+   ]
+  }
+ ],
+ "stats": {
+  "total": 46,
+  "pass": 30,
+  "fail": 16,
+  "blocked": 0,
+  "skipped": 0,
+  "parCategorie": [
+   {
+    "nom": "Cas nominaux",
+    "total": 8,
+    "pass": 8,
+    "fail": 0
+   },
+   {
+    "nom": "Cas aux limites",
+    "total": 10,
+    "pass": 9,
+    "fail": 1
+   },
+   {
+    "nom": "Cas d'erreur",
+    "total": 12,
+    "pass": 12,
+    "fail": 0
+   },
+   {
+    "nom": "Règles métier",
+    "total": 16,
+    "pass": 1,
+    "fail": 15
+   }
+  ],
+  "severites": [
+   {
+    "nom": "Bloquante",
+    "n": 1
+   },
+   {
+    "nom": "Critique",
+    "n": 4
+   },
+   {
+    "nom": "Majeure",
+    "n": 6
+   },
+   {
+    "nom": "Mineure",
+    "n": 2
+   }
+  ]
+ }
+}
